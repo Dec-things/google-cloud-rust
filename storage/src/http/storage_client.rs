@@ -1022,6 +1022,38 @@ impl StorageClient {
         Ok(response.bytes_stream().map_err(Error::from))
     }
 
+    /// Download the object.
+    /// https://cloud.google.com/storage/docs/json_api/v1/objects/get
+    /// alt is always media
+    ///
+    /// ```
+    /// use google_cloud_storage::client::Client;
+    /// use google_cloud_storage::http::objects::get::GetObjectRequest;
+    /// use google_cloud_storage::http::objects::download::Range;
+    ///
+    ///
+    /// async fn run(client:Client) {
+    ///
+    ///     let result = client.download_object(&GetObjectRequest{
+    ///         bucket: "bucket".to_string(),
+    ///         object: "object".to_string(),
+    ///         ..Default::default()
+    ///     }, &Range::default()).await;
+    /// }
+    /// ```
+    #[cfg_attr(feature = "trace", tracing::instrument(skip_all))]
+    pub async fn download_object_reqwest(
+        &self,
+        req: &GetObjectRequest,
+        range: &Range,
+    ) -> Result<reqwest::Response, Error> {
+        let builder = objects::download::build(self.v1_endpoint.as_str(), &self.http, req, range);
+        let request = self.with_headers(builder).await?;
+        let response = request.send().await?;
+        let response = check_response_status(response).await?;
+        Ok(response)
+    }
+
     /// Uploads the object.
     /// https://cloud.google.com/storage/docs/json_api/v1/objects/insert
     ///
